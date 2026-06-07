@@ -1,0 +1,19 @@
+# Render Blueprint — deve ficar na RAIZ do repositório Git
+# Deploy: Render Dashboard → New + → Blueprint
+
+services:
+  - type: web
+    name: onecheck-web
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile.web
+    dockerContext: .
+    healthCheckPath: /public/login.php
+    envVars:
+      - key: ONECHECK_API_URL
+        value: "http://3.145.6.22:8000"
+      - key: ONECHECK_BASE_PATH
+        value: ""
+      - key: ONECHECK_JWT_SECRET
+        generateValue: true
