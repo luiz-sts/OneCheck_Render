@@ -67,31 +67,43 @@ require ONECHECK_ROOT . '/includes/header.php';
                     <th>Perfil</th>
                     <th>MFA</th>
                     <th>Cadastrado em</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($usuarios as $u): ?>
+                <?php $uid = $u['id'] ?? ''; $urole = $u['role'] ?? ($u['perfil'] ?? ''); ?>
                 <tr>
                     <td><?= e($u['nome'] ?? '—') ?></td>
                     <td style="font-size:12px"><?= e($u['email'] ?? '—') ?></td>
                     <td>
                         <?php
-                        echo match($u['role'] ?? '') {
+                        echo match($urole) {
                             'admin'       => '<span class="badge bg-danger">Admin</span>',
+                            'gestor'      => '<span class="badge bg-warning text-dark">Gestor</span>',
                             'vistoriador' => '<span class="badge bg-primary">Vistoriador</span>',
                             'locatario'   => '<span class="badge bg-success">Locatário</span>',
-                            default       => '<span class="badge bg-secondary">' . e($u['role'] ?? '') . '</span>',
+                            'visualizador'=> '<span class="badge bg-info text-dark">Visualizador</span>',
+                            default       => '<span class="badge bg-secondary">' . e($urole) . '</span>',
                         };
                         ?>
                     </td>
                     <td>
-                        <?php if ($u['mfa_ativo'] ?? false): ?>
+                        <?php if ($u['mfa_ativo'] ?? ($u['mfa_enabled'] ?? false)): ?>
                             <span class="badge bg-success"><i class="bi bi-shield-check"></i> Ativo</span>
                         <?php else: ?>
                             <span class="badge bg-secondary">Inativo</span>
                         <?php endif; ?>
                     </td>
                     <td style="font-size:12px;color:#6b7fa3"><?= e(substr($u['created_at'] ?? '', 0, 10)) ?></td>
+                    <td>
+                        <?php if ($uid): ?>
+                        <a href="<?= e(base_url('usuarios/editar.php?id=' . urlencode($uid))) ?>"
+                           class="btn btn-outline-secondary btn-sm py-0 px-2">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <?php endif; ?>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

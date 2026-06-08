@@ -38,10 +38,19 @@ function app_web_root(): string
         return $root;
     }
 
+    // Se ONECHECK_BASE_PATH estiver definida (mesmo vazia), usa diretamente.
+    // No Render com ONECHECK_BASE_PATH="" o base será sempre "" (raiz).
+    $envBase = getenv('ONECHECK_BASE_PATH');
+    if ($envBase !== false) {
+        $root = rtrim(str_replace('\\', '/', (string) $envBase), '/');
+        return $root;
+    }
+
     $cfg = ONECHECK_ROOT . '/config/app.php';
     if (is_file($cfg)) {
         $app = require $cfg;
-        if (!empty($app['base_path'])) {
+        // isset permite base_path = "" explicitamente (local XAMPP = "/onecheck")
+        if (isset($app['base_path'])) {
             $root = rtrim(str_replace('\\', '/', (string) $app['base_path']), '/');
             return $root;
         }

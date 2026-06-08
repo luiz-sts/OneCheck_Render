@@ -15,13 +15,16 @@ $user = api_user();
 <body class="app-body">
 <nav class="navbar app-navbar">
     <div class="container">
-        <span class="navbar-brand mb-0">
+        <a class="navbar-brand" href="<?= e(base_url('locatario/index.php')) ?>"
+           style="font-weight:700;letter-spacing:-.3px;font-size:16px">
             <span class="brand-one">One</span><span class="brand-check">Check</span>
-            <span class="text-muted small ms-2">Locatário</span>
-        </span>
+            <span style="font-weight:400;font-size:13px;color:var(--oc-muted);margin-left:8px">Locatário</span>
+        </a>
         <div class="d-flex gap-2 align-items-center">
-            <span class="text-muted small d-none d-sm-inline"><?= e($user['nome'] ?? '') ?></span>
-            <a class="btn btn-sm btn-outline-light" href="<?= e(base_url('public/logout.php')) ?>">Sair</a>
+            <span class="d-none d-sm-inline" style="font-size:12px;color:var(--oc-muted)"><?= e($user['nome'] ?? '') ?></span>
+            <a class="btn btn-sm btn-outline-light" href="<?= e(base_url('public/logout.php')) ?>">
+                <i class="bi bi-box-arrow-right me-1"></i>Sair
+            </a>
         </div>
     </div>
 </nav>
