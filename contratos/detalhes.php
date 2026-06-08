@@ -7,7 +7,7 @@ require_once dirname(__DIR__) . '/includes/auth_api.php';
 require_once dirname(__DIR__) . '/includes/rbac.php';
 api_require_login();
 
-$id = get_int('id');
+$id = get_uuid('id');
 $pdo = Database::pdo();
 
 $stmt = $pdo->prepare(

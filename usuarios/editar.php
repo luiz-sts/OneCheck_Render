@@ -6,8 +6,8 @@ require_once dirname(__DIR__) . '/includes/auth_api.php';
 require_once dirname(__DIR__) . '/includes/rbac.php';
 api_require_page('usuarios');
 
-$id = get_int('id');
-if (!$id) {
+$id = get_uuid('id');
+if ($id === '') {
     flash_set('error', 'ID inválido.');
     redirect(base_url('usuarios/index.php'));
 }

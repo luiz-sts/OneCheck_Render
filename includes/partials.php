@@ -89,6 +89,17 @@ function get_int(string $key): int
     return (int) ($_GET[$key] ?? 0);
 }
 
+function get_uuid(string $key): string
+{
+    $val = trim($_GET[$key] ?? '');
+    // Aceita UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx) ou inteiro
+    if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $val)) {
+        return $val;
+    }
+    // Fallback: inteiro
+    return preg_match('/^[0-9]+$/', $val) ? $val : '';
+}
+
 function get_str(string $key): string
 {
     return trim($_GET[$key] ?? '');
