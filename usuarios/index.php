@@ -80,19 +80,22 @@ require ONECHECK_ROOT . '/includes/header.php';
                         <?php
                         echo match($urole) {
                             'admin'       => '<span class="badge bg-danger">Admin</span>',
-                            'gestor'      => '<span class="badge bg-warning text-dark">Gestor</span>',
                             'vistoriador' => '<span class="badge bg-primary">Vistoriador</span>',
                             'locatario'   => '<span class="badge bg-success">Locatário</span>',
-                            'visualizador'=> '<span class="badge bg-info text-dark">Visualizador</span>',
-                            default       => '<span class="badge bg-secondary">' . e($urole) . '</span>',
+                            default       => '<span class="badge bg-secondary">' . e(ucfirst($urole)) . '</span>',
                         };
                         ?>
                     </td>
                     <td>
-                        <?php if ($u['mfa_ativo'] ?? ($u['mfa_enabled'] ?? false)): ?>
-                            <span class="badge bg-success"><i class="bi bi-shield-check"></i> Ativo</span>
+                        <?php
+                        $mfaAtivo = (bool)($u['mfa_ativo'] ?? ($u['mfa_enabled'] ?? false));
+                        $mfaObr   = (bool)($u['mfa_obrigatorio'] ?? ($u['mfa_required'] ?? false));
+                        if ($mfaAtivo): ?>
+                            <span class="badge bg-success"><i class="bi bi-shield-check me-1"></i>Ativo</span>
+                        <?php elseif ($mfaObr): ?>
+                            <span class="badge bg-warning text-dark"><i class="bi bi-shield-exclamation me-1"></i>Pendente</span>
                         <?php else: ?>
-                            <span class="badge bg-secondary">Inativo</span>
+                            <span class="badge bg-secondary"><i class="bi bi-shield me-1"></i>Inativo</span>
                         <?php endif; ?>
                     </td>
                     <td style="font-size:12px;color:#6b7fa3"><?= e(substr($u['created_at'] ?? '', 0, 10)) ?></td>

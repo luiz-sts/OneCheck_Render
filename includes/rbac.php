@@ -5,7 +5,7 @@
 
 function api_role(): string
 {
-    return strtolower((string) ($_SESSION['user']['role'] ?? 'visualizador'));
+    return strtolower((string) ($_SESSION['user']['role'] ?? 'locatario'));
 }
 
 function api_is_admin(): bool
@@ -25,13 +25,13 @@ function api_home_url(): string
 function api_page_roles(): array
 {
     return [
-        'dashboard'  => ['admin', 'gestor', 'vistoriador', 'visualizador'],
-        'imoveis'    => ['admin', 'gestor', 'vistoriador', 'visualizador'],
-        'vistorias'  => ['admin', 'gestor', 'vistoriador', 'visualizador', 'locatario'],
-        'contratos'  => ['admin', 'gestor', 'visualizador'],
-        'problemas'  => ['admin', 'gestor', 'vistoriador', 'visualizador', 'locatario'],
-        'mapa'       => ['admin', 'gestor', 'vistoriador', 'visualizador'],
-        'usuarios'   => ['admin', 'gestor'],
+        'dashboard'  => ['admin', 'vistoriador'],
+        'imoveis'    => ['admin', 'vistoriador'],
+        'vistorias'  => ['admin', 'vistoriador', 'locatario'],
+        'contratos'  => ['admin', 'vistoriador'],
+        'problemas'  => ['admin', 'vistoriador', 'locatario'],
+        'mapa'       => ['admin', 'vistoriador'],
+        'usuarios'   => ['admin'],
         'logs'       => ['admin'],
         'locatario'  => ['locatario'],
     ];
@@ -61,10 +61,10 @@ function api_can_create(string $resource): bool
         return true;
     }
     $matrix = [
-        'imoveis'    => ['admin', 'gestor'],
-        'contratos'  => ['admin', 'gestor'],
-        'vistorias'  => ['admin', 'gestor', 'vistoriador'],
-        'problemas'  => ['admin', 'gestor', 'vistoriador', 'locatario'],
+        'imoveis'    => ['admin'],
+        'contratos'  => ['admin'],
+        'vistorias'  => ['admin', 'vistoriador'],
+        'problemas'  => ['admin', 'vistoriador', 'locatario'],
         'usuarios'   => ['admin'],
     ];
     return in_array(api_role(), $matrix[$resource] ?? [], true);

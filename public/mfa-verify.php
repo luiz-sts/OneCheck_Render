@@ -22,6 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $res = ApiClient::post('/auth/mfa/verify', [
         'temp_token' => $_SESSION['mfa_temp_token'],
         'codigo'     => $codigo,
+        'code'       => $codigo,   // fallback nome alternativo
+        'totp_code'  => $codigo,   // fallback nome alternativo
     ]);
 
     if (!empty($res['sucesso']) && !empty($res['dados']['access_token'])) {

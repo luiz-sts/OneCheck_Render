@@ -3,39 +3,51 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/config/api.php';
 require_once dirname(__DIR__) . '/includes/auth_api.php';
-require_once dirname(__DIR__) . '/includes/rbac.php';
 
 api_require_login();
 
-$user = api_user();
-$erro = '';
+$erro    = '';
+$sucesso = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $code   = trim($_POST['code']   ?? '');
-    $secret = trim($_POST['secret'] ?? '');
+// Buscar URI do autenticador
+$setupRes   = ApiClient::get('/auth/mfa/setup');
+$dados      = $setupRes['dados'] ?? [];
+$otpauthUri = $dados['otpauth_uri'] ?? '';
 
-    $res = ApiClient::post('/auth/mfa/setup', [
-        'secret' => $secret,
-        'codigo' => $code,
-    ]);
-
-    if (!empty($res['sucesso'])) {
-        // Atualizar sessão para refletir MFA ativo
-        $_SESSION['user']['mfa_ativo']   = true;
-        $_SESSION['user']['mfa_enabled'] = true;
-        flash_set('success', 'MFA ativado com sucesso!');
-        redirect(base_url('usuarios/perfil.php'));
-    }
-    $erro = $res['erro'] ?? ($res['message'] ?? 'Código inválido. Confira o app autenticador.');
+// Extrair secret da URI (secret=XXXXX)
+$secret = '';
+if ($otpauthUri && preg_match('/secret=([A-Z2-7]+)/i', $otpauthUri, $m)) {
+    $secret = $m[1];
 }
 
-// Busca QR Code e secret da API
-$setupRes = ApiClient::get('/auth/mfa/setup');
-$dados    = $setupRes['dados'] ?? [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $code = trim($_POST['code'] ?? '');
 
-// A API pode retornar o campo com nomes diferentes
-$qrUrl  = $dados['qr_url']       ?? ($dados['qr_code_url'] ?? ($dados['qrcode_url'] ?? ($dados['qr'] ?? '')));
-$secret = $dados['secret']        ?? ($dados['totp_secret'] ?? ($dados['mfa_secret'] ?? ''));
+    if (strlen($code) !== 6 || !ctype_digit($code)) {
+        $erro = 'Informe um código de 6 dígitos.';
+    } else {
+        $res = ApiClient::post('/auth/mfa/setup', [
+            'codigo' => $code,
+            'code'   => $code, // alguns endpoints aceitam 'code'
+        ]);
+
+        if (!empty($res['sucesso'])) {
+            // Atualizar sessão
+            $_SESSION['user']['mfa_ativo']   = true;
+            $_SESSION['user']['mfa_enabled'] = true;
+            flash_set('success', 'MFA ativado com sucesso! A partir do próximo login será solicitado.');
+            redirect(base_url('usuarios/perfil.php'));
+        } else {
+            $erro = $res['erro'] ?? ($res['message'] ?? 'Código inválido. Tente novamente.');
+        }
+    }
+}
+
+// URL do QR Code via API do Google Charts (gera QR a partir da URI)
+$qrCodeUrl = '';
+if ($otpauthUri) {
+    $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . urlencode($otpauthUri);
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -46,60 +58,96 @@ $secret = $dados['secret']        ?? ($dados['totp_secret'] ?? ($dados['mfa_secr
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="<?= e(asset_url('css/style.css')) ?>" rel="stylesheet">
-    <style>.brand-one{color:#fff}.brand-check{color:#22c55e}</style>
+    <style>
+        .brand-one  { color: #fff; }
+        .brand-check{ color: #22c55e; }
+    </style>
 </head>
 <body class="app-body">
 <div class="login-wrap">
-    <div class="login-card" style="max-width:480px">
+    <div class="login-card" style="max-width:500px">
+
         <div class="login-logo mb-2">
             <span style="font-size:24px;font-weight:700;letter-spacing:-.5px">
                 <span class="brand-one">One</span><span class="brand-check">Check</span>
             </span>
         </div>
-        <h5 class="text-center mb-1" style="color:#fff">Configurar autenticação em 2 fatores</h5>
+
+        <h5 class="text-center mb-1" style="color:#fff">
+            <i class="bi bi-shield-lock me-2" style="color:#4f8ef7"></i>Autenticação em 2 fatores
+        </h5>
         <p class="text-center mb-4" style="font-size:13px;color:#6b7fa3">
-            Escaneie o QR Code no Google Authenticator ou Authy e informe o código gerado.
+            Configure o MFA para proteger sua conta
         </p>
 
         <?php if ($erro): ?>
         <div class="alert alert-danger py-2 mb-3"><?= e($erro) ?></div>
         <?php endif; ?>
 
-        <?php if ($qrUrl): ?>
-        <div class="text-center mb-3">
-            <img src="<?= e($qrUrl) ?>" alt="QR Code MFA" width="200" height="200"
-                 style="border:1px solid #2a3347;border-radius:8px;background:#fff;padding:8px">
-        </div>
-        <p class="text-center mb-4" style="font-size:12px;color:#6b7fa3">
-            Chave manual: <code style="color:#4f8ef7"><?= e($secret) ?></code>
-        </p>
-        <?php else: ?>
+        <?php if (!$otpauthUri): ?>
         <div class="alert alert-warning mb-3">
             <i class="bi bi-exclamation-triangle me-2"></i>
-            Não foi possível carregar o QR Code.
+            Não foi possível carregar as informações de configuração.
             <?php if (!empty($setupRes['erro'])): ?>
             <br><small><?= e($setupRes['erro']) ?></small>
             <?php endif; ?>
         </div>
+        <?php else: ?>
+
+        <!-- Passo 1 -->
+        <div class="mb-3 p-3" style="background:#1e2535;border-radius:10px">
+            <p class="mb-2" style="font-size:13px;color:#c8d4f0;font-weight:500">
+                <span class="badge bg-primary me-2">1</span>
+                Abra o <strong>Google Authenticator</strong> ou <strong>Authy</strong>
+            </p>
+            <p class="mb-0" style="font-size:12px;color:#6b7fa3">
+                Toque em <strong>"+"</strong> → <strong>"Escanear QR Code"</strong> e aponte para o código abaixo
+            </p>
+        </div>
+
+        <!-- QR Code -->
+        <div class="text-center mb-3">
+            <img src="<?= e($qrCodeUrl) ?>"
+                 alt="QR Code para autenticador"
+                 width="200" height="200"
+                 style="border-radius:10px;background:#fff;padding:8px;border:1px solid #2a3347">
+        </div>
+
+        <!-- Chave manual -->
+        <?php if ($secret): ?>
+        <div class="mb-4 text-center">
+            <p style="font-size:11px;color:#6b7fa3;margin-bottom:4px">Ou insira a chave manualmente:</p>
+            <code style="background:#1e2535;color:#4f8ef7;padding:6px 12px;border-radius:6px;font-size:13px;letter-spacing:.1em">
+                <?= e($secret) ?>
+            </code>
+        </div>
         <?php endif; ?>
 
-        <form method="post">
-            <input type="hidden" name="secret" value="<?= e($secret) ?>">
+        <!-- Passo 2 -->
+        <div class="mb-3 p-3" style="background:#1e2535;border-radius:10px">
+            <p class="mb-0" style="font-size:13px;color:#c8d4f0;font-weight:500">
+                <span class="badge bg-primary me-2">2</span>
+                Informe o código de <strong>6 dígitos</strong> gerado pelo app
+            </p>
+        </div>
+
+        <form method="post" autocomplete="off">
             <div class="mb-3">
-                <label class="form-label" for="code">
-                    <i class="bi bi-key me-1"></i>Código de 6 dígitos
-                </label>
-                <input type="text" class="form-control text-center" id="code" name="code"
+                <input type="text" class="form-control form-control-lg text-center"
+                       name="code" id="code"
                        inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
-                       required autofocus placeholder="000000">
+                       required autofocus placeholder="000000"
+                       style="font-size:24px;letter-spacing:.3em">
             </div>
-            <button type="submit" class="btn btn-primary w-100" style="padding:10px">
+            <button type="submit" class="btn btn-primary w-100" style="padding:10px;font-size:14px">
                 <i class="bi bi-shield-check me-1"></i>Ativar MFA
             </button>
         </form>
 
+        <?php endif; ?>
+
         <p class="text-center mt-3 mb-0">
-            <a href="<?= e(base_url('usuarios/perfil.php')) ?>" style="font-size:12px">
+            <a href="<?= e(base_url('usuarios/perfil.php')) ?>" style="font-size:12px;color:#6b7fa3">
                 ← Voltar ao perfil
             </a>
         </p>
