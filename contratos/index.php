@@ -17,9 +17,38 @@ $contratos = $res['dados'] ?? [];
 $total     = $res['paginacao']['total'] ?? 0;
 $totalPag  = (int) ceil($total / 20);
 
+// Busca nomes de locatários e imóveis para exibição amigável
+// (a API de contratos retorna só IDs)
+$locatariosMap = [];
+$imoveisMap    = [];
+
+if ($contratos) {
+    $locIds   = array_unique(array_filter(array_column($contratos, 'locatario_id')));
+    $imovelIds = array_unique(array_filter(array_column($contratos, 'imovel_id')));
+
+    // Busca locatários em lote
+    $resLoc = ApiClient::get('/usuarios', ['por_pagina' => 100]);
+    foreach (($resLoc['dados'] ?? []) as $u) {
+        $locatariosMap[$u['id']] = $u['nome'] ?? $u['email'] ?? $u['id'];
+    }
+
+    // Busca imóveis em lote
+    $resIm = ApiClient::get('/imoveis', ['por_pagina' => 100]);
+    foreach (($resIm['dados'] ?? []) as $im) {
+        $end = $im['endereco'] ?? null;
+        if ($end) {
+            $label = ($im['tipo'] ?? 'Imóvel') . ' — ' . ($end['rua'] ?? '') . ', ' . ($end['numero'] ?? '') . ' · ' . ($end['cidade'] ?? '');
+        } else {
+            $label = ($im['tipo'] ?? 'Imóvel') . ' · ' . ($im['tamanho'] ?? '') . ' (sem endereço)';
+        }
+        $imoveisMap[$im['id']] = $label;
+    }
+}
+
 $pageTitle  = 'Contratos';
 $activeMenu = 'contratos';
 require ONECHECK_ROOT . '/includes/header.php';
+flash_render();
 ?>
 
 <div class="d-flex justify-content-between align-items-start mb-4">
@@ -27,9 +56,11 @@ require ONECHECK_ROOT . '/includes/header.php';
         <h2>Contratos</h2>
         <p><?= $total ?> contrato(s) registrado(s)</p>
     </div>
+    <?php if (api_can_create('contratos')): ?>
     <a href="<?= e(base_url('contratos/novo.php')) ?>" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-lg me-1"></i>Novo contrato
     </a>
+    <?php endif; ?>
 </div>
 
 <!-- Filtros -->
@@ -57,37 +88,44 @@ require ONECHECK_ROOT . '/includes/header.php';
     <div class="card-body p-0">
         <?php if (!$contratos): ?>
         <div class="p-4" style="color:#6b7fa3;font-size:13px">
-            <i class="bi bi-file-earmark-text me-2"></i>Nenhum contrato registrado na API ainda.
+            <i class="bi bi-file-earmark-text me-2"></i>Nenhum contrato encontrado.
         </div>
         <?php else: ?>
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
-                    <th>ID</th>
                     <th>Imóvel</th>
                     <th>Locatário</th>
                     <th>Início</th>
                     <th>Fim</th>
                     <th>Status</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($contratos as $ct): ?>
+                <?php
+                    $locNome  = $locatariosMap[$ct['locatario_id'] ?? ''] ?? ('...' . substr($ct['locatario_id'] ?? '', 0, 8));
+                    $imLabel  = $imoveisMap[$ct['imovel_id'] ?? '']       ?? ('Imóvel ' . substr($ct['imovel_id'] ?? '', 0, 8) . '...');
+                ?>
                 <tr>
-                    <td style="font-size:11px;color:#6b7fa3"><?= e(substr($ct['id'] ?? '', 0, 8)) ?>...</td>
-                    <td style="font-size:12px"><?= e(substr($ct['imovel_id'] ?? '', 0, 8)) ?>...</td>
-                    <td style="font-size:12px"><?= e(substr($ct['locatario_id'] ?? '', 0, 8)) ?>...</td>
-                    <td><?= e(substr($ct['data_inicio'] ?? '', 0, 10)) ?></td>
-                    <td><?= e(substr($ct['data_fim'] ?? '', 0, 10)) ?></td>
+                    <td style="font-size:12px"><?= e($imLabel) ?></td>
+                    <td style="font-size:12px"><?= e($locNome) ?></td>
+                    <td><?= e(format_date($ct['data_inicio'] ?? '')) ?></td>
+                    <td><?= e(format_date($ct['data_fim'] ?? '')) ?></td>
                     <td>
-                        <?php
-                        echo match($ct['status'] ?? '') {
+                        <?php echo match($ct['status'] ?? '') {
                             'ativo'     => '<span class="badge bg-success">Ativo</span>',
                             'encerrado' => '<span class="badge bg-secondary">Encerrado</span>',
                             'cancelado' => '<span class="badge bg-danger">Cancelado</span>',
                             default     => '<span class="badge bg-secondary">' . e($ct['status'] ?? '') . '</span>',
-                        };
-                        ?>
+                        }; ?>
+                    </td>
+                    <td>
+                        <a href="<?= e(base_url('contratos/detalhes.php?id=' . urlencode($ct['id'] ?? ''))) ?>"
+                           class="btn btn-outline-secondary btn-sm py-0 px-2">
+                            <i class="bi bi-eye"></i>
+                        </a>
                     </td>
                 </tr>
                 <?php endforeach; ?>
