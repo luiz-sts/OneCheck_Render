@@ -64,7 +64,12 @@ $perfilNome = $dados['role'] ?? ($dados['perfil'] ?? '');
 
 $pageTitle  = 'Meu perfil';
 $activeMenu = 'usuarios';
-require ONECHECK_ROOT . '/includes/header.php';
+$role = ($dados['role'] ?? ($dados['perfil'] ?? ''));
+if ($role === 'locatario') {
+    require ONECHECK_ROOT . '/locatario/_header.php';
+} else {
+    require ONECHECK_ROOT . '/includes/header.php';
+}
 flash_render();
 page_header('Meu perfil', $dados['email'] ?? $user['email'] ?? '');
 ?>
@@ -152,4 +157,8 @@ page_header('Meu perfil', $dados['email'] ?? $user['email'] ?? '');
     </a>
 </div>
 
-<?php require ONECHECK_ROOT . '/includes/footer.php'; ?>
+<?php if ($role === 'locatario') {
+    require ONECHECK_ROOT . '/locatario/_footer.php';
+} else {
+    require ONECHECK_ROOT . '/includes/footer.php';
+} ?>

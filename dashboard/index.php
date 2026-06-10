@@ -254,26 +254,49 @@ document.addEventListener('DOMContentLoaded', function() {
         data: {
             labels: graficoMensal.labels,
             datasets: [
-                { label: 'Vistorias',  data: graficoMensal.total,      backgroundColor: '#3B82F6', borderRadius: 5, barPercentage: 0.6 },
-                { label: 'Concluídas', data: graficoMensal.concluidas,  backgroundColor: '#22C55E', borderRadius: 5, barPercentage: 0.6 }
+                {
+                    label: 'Vistorias',
+                    data: graficoMensal.total,
+                    backgroundColor: '#3B82F6',
+                    borderRadius: 5,
+                    barPercentage: 0.5,
+                    categoryPercentage: 0.8
+                },
+                {
+                    label: 'Concluídas',
+                    data: graficoMensal.concluidas,
+                    backgroundColor: '#22C55E',
+                    borderRadius: 5,
+                    barPercentage: 0.5,
+                    categoryPercentage: 0.8
+                }
             ]
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { 
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
                 legend: { display: false },
                 datalabels: {
+                    display: (context) => context.dataset.data[context.dataIndex] > 0,
                     color: '#fff',
-                    anchor: 'end',
-                    align: 'top',
-                    offset: -20,
+                    anchor: 'center',
+                    align: 'center',
                     font: { size: 10, weight: 'bold' },
                     formatter: (value) => value > 0 ? value : ''
                 }
             },
             scales: {
-                x: { ticks: { color: '#94A3B8', font: { size: 11 } }, grid: { color: '#243044' } },
-                y: { ticks: { color: '#94A3B8', font: { size: 11 } }, grid: { color: '#243044' }, beginAtZero: true }
+                x: {
+                    ticks: { color: '#94A3B8', font: { size: 11 } },
+                    grid: { color: '#243044' }
+                },
+                y: {
+                    ticks: { color: '#94A3B8', font: { size: 11 } },
+                    grid: { color: '#243044' },
+                    beginAtZero: true,
+                    suggestedMax: Math.max(...graficoMensal.total, 5) + 2
+                }
             }
         }
     });
